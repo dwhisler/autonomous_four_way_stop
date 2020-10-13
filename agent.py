@@ -49,3 +49,11 @@ class QLearningAgent(util.RLAgorithm):
         # print(2, eta, gamma, V_opt, Q)
         for f, v in self.featureExtractor(state,action):
             self.weights[f] -= eta*(Q - (reward + gamma*V_opt))*v
+
+
+# Return a single-element list containing a binary (indicator) feature
+# for the existence of the (state, action) pair.  Provides no generalization.
+def identityFeatureExtractor(state: Tuple, action: Any) -> List[Tuple[Tuple, int]]:
+    featureKey = (state, action)
+    featureValue = 1
+    return [(featureKey, featureValue)]
