@@ -1,5 +1,8 @@
-# taken from CS 221 HW4
+import util
+import numpy as np
+from typing import List, Callable, Tuple, Any, NewType
 
+# taken from CS 221 HW4
 
 # EXAMPLE MDP
 class BlackjackMDP(util.MDP):
@@ -48,7 +51,53 @@ class BlackjackMDP(util.MDP):
     def succAndProbReward(self, state: Tuple, action: str) -> List[Tuple]:
         # BEGIN_YOUR_CODE (our solution is 38 lines of code, but don't worry if you deviate from this)
         
+        #
+        # TODO
+        raise NotImplementedError
+        #
+
         # END_YOUR_CODE
 
     def discount(self):
+        return 1
+
+
+class FourWayStopMDP(util.MDP):
+    def __init__(self, grid: np.ndarray, stops: List[Tuple]):
+        """
+        grid: 2D numpy array which maps the initial road layout
+        stops: List of (x,y) for where stop signs are located 
+                -> alternatively, this could be incorporated into grid
+        """
+        self.grid = grid
+        self.stops = stops
+
+    # Return the start state.
+    def startState(self) -> Tuple:
+        return (0, None, (self.multiplicity,) * len(self.cardValues))
+
+    # Return set of actions possible from |state|.
+    # All logic for dealing with end states should be placed into the succAndProbReward function below.
+    def actions(self, state: Tuple) -> List[str]:
+        return ['forward', 'backward', 'left', 'right', 'stay'] # probably should update this to avoid going off the map
+
+    # Given a |state| and |action|, return a list of (newState, prob, reward) tuples
+    # corresponding to the states reachable from |state| when taking |action|.
+    # A few reminders:
+    # * Indicate a terminal state (after accident or arriving)
+    #     possibly by setting the flag?
+    # * If |state| is an end state, you should return an empty list [].
+    # * When the probability is 0 for a transition to a particular new state,
+    #   don't include that state in the list returned by succAndProbReward.
+
+    def succAndProbReward(self, state: Tuple, action: str) -> List[Tuple]:
+        
+        #
+        # TODO
+        raise NotImplementedError
+        #
+
+
+    def discount(self):
+        # potentially could be updated
         return 1

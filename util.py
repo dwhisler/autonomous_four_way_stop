@@ -1,3 +1,7 @@
+# imports
+import numpy as np
+from typing import List, Callable, Tuple, Any
+
 # borrowed from CS221 Homework
 
 

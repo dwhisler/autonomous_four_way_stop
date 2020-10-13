@@ -1,4 +1,7 @@
-class QLearningAgent(util.RLAgorithm):
+import util
+from typing import List, Callable, Tuple, Any
+
+class QLearningAgent(util.RLAlgorithm):
     def __init__(self, actions: Callable, discount: float, featureExtractor: Callable, explorationProb=0.2):
         self.actions = actions
         self.discount = discount
