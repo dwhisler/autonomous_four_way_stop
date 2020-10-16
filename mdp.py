@@ -121,20 +121,60 @@ class FourWayStopMDP(util.MDP):
         return -1 # default, pushes toward destination so it doesn't sit in one spot
 
 class OtherActor:
-    def __init__(self, dest, probstop=0.9):
+    def __init__(self, start, dest, probstop=0.9, gridsz=6):
         self.probstop = probstop
-        # assume dest is a direction i.e. 'north'/'south'... with a corresponding coordinate (3, 0), (2, 5)
+        # assume dest is a coordinate i.e. (3, 0), (2, 5)
+        # assume start is a coordinate i.e. (3, 0), (2, 5)
         self.dest = dest
-        west_to_east = [(i, 3) for i in range(6)]
-        east_to_west = [(i, 2) for i in range(6)]
-        south_to_north = [(3, i) for i in range(6)]
-        north_to_south = [(2, i) for i in range(6)]
+        self.start = start
+        self.valid_locs = set()
+        if start[0] == 0 :
+            for i in range(0, dest[0] + 1):
+                self.valid_locs.add((i, start[1]))
+        elif start[0] == (gridsz - 1):
+            for i in range(dest[0], gridsz):
+                self.valid_locs.add((i, start[1]))
+        elif start[0] == (gridsz // 2):
+            for i in range(0, dest[1] + 1):
+                self.valid_locs.add((start[0], i))
+        else: # start[0] == ((gridsz // 2) + 1);
+            for i in range(dest[1], gridsz):
+                self.valid_locs.add((start[0], i))
+        if dest[0] == 0 :
+            for i in range(0, start[0] + 1):
+                self.valid_locs.add((i, dest[1]))
+        elif dest[0] == (gridsz - 1):
+            for i in range(start[0], gridsz):
+                self.valid_locs.add((i, dest[1]))
+        elif dest[0] == (gridsz // 2):
+            for i in range(0, start[1] + 1):
+                self.valid_locs.add((dest[0], i))
+        else: # dest[0] == ((gridsz // 2) + 1);
+            for i in range(start[1], gridsz):
+                self.valid_locs.add((dest[0], i))
+        print(self.valid_locs)
+
+    def min_manhattan_dist(self, moves, dest):
+        return sorted(moves, key=lambda x: abs(x[0][0] - dest[0]) + abs(x[0][1] - dest[1]))[0]
+
     def get_action_probs(self, curr_loc, grid, stops):
-        possible_moves = []
         # assume top left corner is (0, 0)
         # assume that the grid is size 6 x 6
-        action_probs = [('stay', self.probstop), ('west', 1-self.probstop)]
-        return action_probs
+        west = ((((curr_loc[0] - 1) % 6), curr_loc[1]), 'west')
+        east = ((((curr_loc[0] + 1) % 6), curr_loc[1]), 'east')
+        north = ((curr_loc[0], ((curr_loc[1] - 1) % 6)), 'north')
+        south = ((curr_loc[0], ((curr_loc[1] + 1) % 6)), 'south')
+        stay = (curr_loc, 'stay')
+        possible_moves = [move for move in [west, east, north, south] if move[0] in self.valid_locs]
+        print(possible_moves)
+        possible_move = self.min_manhattan_dist(possible_moves, self.dest)
+        if curr_loc not in stops:
+            print([(possible_move, 1)])
+            return [(possible_move, 1)]
+        else:
+            print([('stay', probstop)] + [(possible_move, (1 - probstop))])
+            return [('stay', probstop)] + [(possible_move, (1 - probstop))]
+
 
 if __name__ == '__main__':
     grid = np.zeros((6,6))
