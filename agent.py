@@ -1,5 +1,8 @@
 import util
 from typing import List, Callable, Tuple, Any
+from collections import defaultdict
+import random
+import math
 
 class QLearningAgent(util.RLAlgorithm):
     def __init__(self, actions: Callable, discount: float, featureExtractor: Callable, explorationProb=0.2):
@@ -38,7 +41,7 @@ class QLearningAgent(util.RLAlgorithm):
     def incorporateFeedback(self, state: Tuple, action: Any, reward: int, newState: Tuple) -> None:
         # helpful numbers
         eta = self.getStepSize()
-        gamma = self.discount
+        gamma = self.discount()
         # get Q(s,a) 
         Q = self.getQ(state, action)
         # initialize
@@ -58,5 +61,13 @@ class QLearningAgent(util.RLAlgorithm):
 # for the existence of the (state, action) pair.  Provides no generalization.
 def identityFeatureExtractor(state: Tuple, action: Any) -> List[Tuple[Tuple, int]]:
     featureKey = (state, action)
+    featureValue = 1
+    return [(featureKey, featureValue)]
+
+# Return a single-element list containing a binary (indicator) feature
+# for the existence of the (state, action) pair.  Provides no generalization. 
+# Casts feature key to a string
+def identityFeatureExtractor_str(state: Tuple, action: Any) -> List[Tuple[Tuple, int]]:
+    featureKey = str((state, action))
     featureValue = 1
     return [(featureKey, featureValue)]

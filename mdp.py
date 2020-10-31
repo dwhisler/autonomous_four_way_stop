@@ -38,7 +38,7 @@ class FourWayStopMDP(util.MDP):
         agent_loc = np.array(south_start)
         self.dest = north_end
         other_loc = np.array(east_start)
-        self.other = OtherActor(dest=west_end)
+        self.other = OtherActor(start=east_start, dest=west_end)
         stay_counter = 0
 
         return (agent_loc, other_loc, stay_counter)
@@ -112,7 +112,7 @@ class FourWayStopMDP(util.MDP):
         if np.array_equal(agent_loc, self.dest):
             return 20
 
-        if grid[agent_loc[0], agent_loc[1]] == 0: # if offroad
+        if self.grid[agent_loc[0], agent_loc[1]] == 0: # if offroad
             return -10
 
         if tuple(agent_loc) in self.stops and stay_counter == 1: # incentivize stopping at the stop sign
@@ -152,7 +152,7 @@ class OtherActor:
         else: # dest[0] == ((gridsz // 2) + 1);
             for i in range(start[1], gridsz):
                 self.valid_locs.add((dest[0], i))
-        print(self.valid_locs)
+        # print(self.valid_locs)
 
     def min_manhattan_dist(self, moves, dest):
         return sorted(moves, key=lambda x: abs(x[0][0] - dest[0]) + abs(x[0][1] - dest[1]))[0]
@@ -160,20 +160,22 @@ class OtherActor:
     def get_action_probs(self, curr_loc, grid, stops):
         # assume top left corner is (0, 0)
         # assume that the grid is size 6 x 6
+        # cast current location to tuple -> ncomly
+        curr_loc = tuple(curr_loc)
         west = ((((curr_loc[0] - 1) % 6), curr_loc[1]), 'west')
         east = ((((curr_loc[0] + 1) % 6), curr_loc[1]), 'east')
         north = ((curr_loc[0], ((curr_loc[1] - 1) % 6)), 'north')
         south = ((curr_loc[0], ((curr_loc[1] + 1) % 6)), 'south')
         stay = (curr_loc, 'stay')
         possible_moves = [move for move in [west, east, north, south] if move[0] in self.valid_locs]
-        print(possible_moves)
+        # print(possible_moves)
         possible_move = self.min_manhattan_dist(possible_moves, self.dest)
         if curr_loc not in stops:
-            print([(possible_move, 1)])
-            return [(possible_move, 1)]
+            # print([(possible_move[-1], 1)]) # ncomly added [-1] to all moves to remove the location
+            return [(possible_move[-1], 1)]
         else:
-            print([('stay', probstop)] + [(possible_move, (1 - probstop))])
-            return [('stay', probstop)] + [(possible_move, (1 - probstop))]
+            # print([('stay', self.probstop)] + [(possible_move[-1], (1 - self.probstop))])
+            return [('stay', self.probstop)] + [(possible_move[-1], (1 - self.probstop))]
 
 
 if __name__ == '__main__':
