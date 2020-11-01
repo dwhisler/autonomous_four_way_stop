@@ -1,8 +1,11 @@
 import util
 import numpy as np
+import random
 from typing import List, Callable, Tuple, Any, NewType
 
 # taken from CS 221 HW4
+
+# TODO: Randomize start locations, add other agents
 
 class FourWayStopMDP(util.MDP):
     def __init__(self, grid: np.ndarray, stops: List[Tuple]):
@@ -35,13 +38,21 @@ class FourWayStopMDP(util.MDP):
         east_start = (int(n/2) - 1, n-1)
         east_end = (int(n/2), n-1)
 
-        agent_loc = np.array(south_start)
-        self.dest = north_end
-        other_loc = np.array(east_start)
-        self.other = OtherActor(start=east_start, dest=west_end)
+        agent_loc = south_start
+        self.dest = np.array(random.choice([north_end, west_end, east_end]))
+        starts = [north_start, south_start, west_start, east_start]
+        starts.remove(agent_loc)
+        ends = [north_end, south_end, west_end, east_end]
+        # Chooses random start location and end location, where start != end
+        other_loc = np.array(random.choice(starts))
+        other_dest = np.array(random.choice(ends))
+        while (np.linalg.norm(other_dest-other_loc)) <= 1: # if choose end on same side as start
+            other_dest = np.array(random.choice(ends))
+
+        self.other = OtherActor(start=other_loc, dest=other_dest)
         stay_counter = 0
 
-        return (agent_loc, other_loc, stay_counter)
+        return (np.array(agent_loc), other_loc, stay_counter)
 
     # Return set of actions possible from |state|.
     # All logic for dealing with end states should be placed into the succAndProbReward function below.
@@ -188,7 +199,7 @@ if __name__ == '__main__':
 
     mdp = FourWayStopMDP(grid, stops)
     start_state = mdp.startState()
-    print(mdp.get_reward(start_state))
-    print(mdp.dest)
-    print(start_state)
-    print(mdp.succAndProbReward(start_state, 'north'))
+    # print(mdp.get_reward(start_state))
+    # print(mdp.dest)
+    # print(start_state)
+    # print(mdp.succAndProbReward(start_state, 'north'))
