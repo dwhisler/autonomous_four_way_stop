@@ -6,7 +6,7 @@ from time import sleep
 from typing import List, Callable, Tuple, Any
 from tqdm import tqdm
 
-# borrowed from CS221 Homework
+# borrowed from CS221
 
 
 # An abstract class representing a Markov Decision Process (MDP).
@@ -88,6 +88,7 @@ def simulate(mdp: MDP, rl: RLAlgorithm, numTrials=10, maxIterations=1000, verbos
     gridInfo = (mdp.grid, mdp.stops)
 
     totalRewards = []  # The rewards we get on each trial
+    crashes = [] # indicators for if crashed or not.
     for trial in tqdm(range(numTrials)):
         state = mdp.startState()
         sequence = [state]
@@ -123,9 +124,13 @@ def simulate(mdp: MDP, rl: RLAlgorithm, numTrials=10, maxIterations=1000, verbos
         if verbose:
             print(("Trial %d (totalReward = %s): %s" % (trial, totalReward, sequence)))
         totalRewards.append(totalReward)
+        if np.array_equal(state[0], state[1]):# crash
+            crashes.append(1)
+        else:
+            crashes.append(0)
 
     visualization = (zip(states, rewards, actions), gridInfo)
-    return totalRewards, visualization
+    return totalRewards, crashes, visualization
 
 
 def visualizer(results, gridInfo, sleep_time=1):

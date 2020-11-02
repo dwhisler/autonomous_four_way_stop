@@ -25,7 +25,7 @@ def get_stops(n):
 
 def main():
     # gird size
-    n = 12
+    n = 6
     # create grid + stops
     grid = create_grid(n)
     stops = get_stops(n)
@@ -33,15 +33,16 @@ def main():
     mdp = FourWayStopMDP(grid, stops)
     qRL = QLearningAgent(mdp.actions, mdp.discount, identityFeatureExtractor_str, )
 
-    total_rewards, visualization = simulate(mdp, qRL, maxIterations=20, numTrials=100000)
+    total_rewards, crashes, visualization = simulate(mdp, qRL, maxIterations=10, numTrials=100000)
 
     def moving_average(a, n=100) :
         ret = np.cumsum(a, dtype=float)
         ret[n:] = ret[n:] - ret[:-n]
         return ret[n - 1:] / n
 
-    plt.plot(moving_average(total_rewards))
+    # plt.plot(moving_average(total_rewards))
     # plt.plot(total_rewards)
+    plt.plot(moving_average(crashes, 500))
     plt.show()
     # print(list(visualization[0]))
 
