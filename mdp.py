@@ -21,6 +21,13 @@ class FourWayStopMDP(util.MDP):
                             'west':np.array([0,-1]),
                             'east':np.array([0,1]),
                             'stay':np.array([0,0])}
+        # lemcardenas: action_dict was working opposite of what OtherActor expected
+        # (x is 0th coord, y is 1st coord)
+        self.other_action_dict = {'north':np.array([0,-1]),
+                            'south':np.array([0,1]),
+                            'west':np.array([-1,0]),
+                            'east':np.array([1,0]),
+                            'stay':np.array([0,0])}
         self.dest = None
         self.other = None
 
@@ -86,16 +93,24 @@ class FourWayStopMDP(util.MDP):
         if np.array_equal(agent_loc, self.dest) or np.array_equal(agent_loc, other_loc): # if at goal or crashed
             new_state = (agent_loc, other_loc, -1) # -1 in stay counter signifies end state
             reward = self.get_reward(new_state)
-            return [new_state, 1, reward]
+            # lemcardenas: replaced [new_state, 1, reward] with [(new_state, 1, reward)]
+            # (not returning a tuple was causing an error)
+            return [(new_state, 1, reward)]
 
         transitions = []
         other_action_probs = self.other.get_action_probs(other_loc, self.grid, self.stops)
         agent_loc_new = agent_loc + self.action_dict[action]
+        # lemcardenas: mod each coordinate or else we go off the grid
+        agent_loc_new[0] %= 6
+        agent_loc_new[1] %= 6
 
         for other_action_prob in other_action_probs:
             other_action = other_action_prob[0]
             other_prob = other_action_prob[1]
-            other_loc_new = other_loc + self.action_dict[other_action]
+            other_loc_new = other_loc + self.other_action_dict[other_action]
+            # lemcardenas: mod each coordinate or else we go off the grid
+            other_loc_new[0] %= 6
+            other_loc_new[1] %= 6
 
             if np.array_equal(agent_loc_new, agent_loc):
                 stay_counter += 1
@@ -173,13 +188,17 @@ class OtherActor:
         # assume that the grid is size 6 x 6
         # cast current location to tuple -> ncomly
         curr_loc = tuple(curr_loc)
-        west = ((((curr_loc[0] - 1) % 6), curr_loc[1]), 'west')
-        east = ((((curr_loc[0] + 1) % 6), curr_loc[1]), 'east')
-        north = ((curr_loc[0], ((curr_loc[1] - 1) % 6)), 'north')
-        south = ((curr_loc[0], ((curr_loc[1] + 1) % 6)), 'south')
+        #west = ((((curr_loc[0] - 1) % 6), curr_loc[1]), 'west')
+        #east = ((((curr_loc[0] + 1) % 6), curr_loc[1]), 'east')
+        #north = ((curr_loc[0], ((curr_loc[1] - 1) % 6)), 'north')
+        #south = ((curr_loc[0], ((curr_loc[1] + 1) % 6)), 'south')
+        # lemcardenas: prevents illegally wrapping around board with one move
+        west = ((((curr_loc[0] - 1) ), curr_loc[1]), 'west')
+        east = ((((curr_loc[0] + 1) ), curr_loc[1]), 'east')
+        north = ((curr_loc[0], ((curr_loc[1] - 1) )), 'north')
+        south = ((curr_loc[0], ((curr_loc[1] + 1) )), 'south')
         stay = (curr_loc, 'stay')
-        possible_moves = [move for move in [west, east, north, south] if move[0] in self.valid_locs]
-        # print(possible_moves)
+        possible_moves = [move for move in [west, east, north, south, stay] if move[0] in self.valid_locs]
         possible_move = self.min_manhattan_dist(possible_moves, self.dest)
         if curr_loc not in stops:
             # print([(possible_move[-1], 1)]) # ncomly added [-1] to all moves to remove the location
