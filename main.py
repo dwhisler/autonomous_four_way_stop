@@ -4,6 +4,7 @@ from util import *
 
 import numpy
 import os
+import matplotlib.pyplot as plt
 
 
 def create_grid(n):
@@ -24,7 +25,7 @@ def get_stops(n):
 
 def main():
     # gird size
-    n = 6
+    n = 12
     # create grid + stops
     grid = create_grid(n)
     stops = get_stops(n)
@@ -32,8 +33,21 @@ def main():
     mdp = FourWayStopMDP(grid, stops)
     qRL = QLearningAgent(mdp.actions, mdp.discount, identityFeatureExtractor_str, )
 
-    total_rewards, visualization = simulate(mdp, qRL)
-    visualizer(*visualization)
+    total_rewards, visualization = simulate(mdp, qRL, maxIterations=20, numTrials=100000)
+
+    def moving_average(a, n=100) :
+        ret = np.cumsum(a, dtype=float)
+        ret[n:] = ret[n:] - ret[:-n]
+        return ret[n - 1:] / n
+
+    plt.plot(moving_average(total_rewards))
+    # plt.plot(total_rewards)
+    plt.show()
+    # print(list(visualization[0]))
+
+    # qRL.explorationProb = 0
+    # total_rewards, visualization = simulate(mdp, qRL, maxIterations=10, numTrials=2)
+    # visualizer(*visualization)
 
 
 

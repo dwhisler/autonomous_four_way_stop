@@ -4,6 +4,7 @@ import random
 import os
 from time import sleep
 from typing import List, Callable, Tuple, Any
+from tqdm import tqdm
 
 # borrowed from CS221 Homework
 
@@ -87,7 +88,7 @@ def simulate(mdp: MDP, rl: RLAlgorithm, numTrials=10, maxIterations=1000, verbos
     gridInfo = (mdp.grid, mdp.stops)
 
     totalRewards = []  # The rewards we get on each trial
-    for trial in range(numTrials):
+    for trial in tqdm(range(numTrials)):
         state = mdp.startState()
         sequence = [state]
         totalDiscount = 1
@@ -117,6 +118,8 @@ def simulate(mdp: MDP, rl: RLAlgorithm, numTrials=10, maxIterations=1000, verbos
             totalReward += totalDiscount * reward
             totalDiscount *= mdp.discount()
             state = newState
+            # if state[-1] == -1: # end state
+            #     break
         if verbose:
             print(("Trial %d (totalReward = %s): %s" % (trial, totalReward, sequence)))
         totalRewards.append(totalReward)
@@ -125,7 +128,7 @@ def simulate(mdp: MDP, rl: RLAlgorithm, numTrials=10, maxIterations=1000, verbos
     return totalRewards, visualization
 
 
-def visualizer(results, gridInfo):
+def visualizer(results, gridInfo, sleep_time=1):
     def makeGrid(grid, stops, locations):
         w = len(grid)
         h = len(grid[0])
@@ -144,7 +147,7 @@ def visualizer(results, gridInfo):
                 return
 
         def updateStops(stops):
-            for x,y in stops:
+            for y,x in stops:
                 if x < w//2 and y < h//2:
                     hor[y+1][x]=u'+\u2013\u2013\u2013'
                 elif x < w//2 and y >= h//2:
@@ -157,12 +160,12 @@ def visualizer(results, gridInfo):
         def updateLocations(l, agent=0):
             x,y=l
             if not agent: # our agent
-                ver[y][x] = ver[y][x][0]+' Us'
+                ver[x][y] = ver[x][y][0]+' Us'
             else: # other agent
-                if ver[y][x][1:] == ' Us':
-                    ver[y][x] = ver[y][x][0]+u' \u2573 '
+                if ver[x][y][1:] == ' Us':
+                    ver[x][y] = ver[x][y][0]+u' \u2573 '
                 else:
-                    ver[y][x] = ver[y][x][0]+'Oth'
+                    ver[x][y] = ver[x][y][0]+'Oth'
 
 
         for x in range(w):
@@ -201,7 +204,7 @@ def visualizer(results, gridInfo):
         clear()
         print(makeGrid(grid=grid, stops=stops, locations=list(s[:-1])),end='')
         print(displayStatus(r,a, s[-1]))
-        sleep(.5)
+        sleep(sleep_time)
 
 
 if __name__ == '__main__':
