@@ -131,12 +131,12 @@ def visualizer(results, gridInfo):
         h = len(grid[0])
         ver = [["|   "] * w + ['|'] for _ in range(h)] + [[]]
         hor = [["+———"] * w + ['+'] for _ in range(h + 1)]
-     
+
         def updateHorizontal(x,y):
             if grid[x][y-1] == 0 and grid[x][y] == 0:
                 hor[y][x] = f'+ ~ '
             elif grid[x][y] == grid[x][y-1]:
-                hor[y][x] = f'+   '   
+                hor[y][x] = f'+   '
 
         def updateVertical(x,y):
             if grid[x-1][y] == grid[x][y]:
@@ -175,7 +175,7 @@ def visualizer(results, gridInfo):
         for i, l in enumerate(locations):
             updateLocations(l, i)
 
-     
+
         s = ""
         for (a, b) in zip(hor, ver):
             s += ''.join(a + ['\n'] + b + ['\n'])
@@ -189,7 +189,7 @@ def visualizer(results, gridInfo):
         s += u'\u2514\u2500\u2500\u2500\u2500\u2500\u2534\u2500\u2500\u2500\u2500\u2500\u2500\u2534\u2500\u2500\u2500\u2500\u2500\u2518\n'
         return s
 
-    clear = lambda: os.system('cls')
+    clear = lambda: os.system('cls' if os.name == 'nt' else 'clear')
     actionDict = {  'north': u'\u2191',
                     'south': u'\u2193',
                     'east': u'\u2192',
@@ -203,7 +203,7 @@ def visualizer(results, gridInfo):
         print(displayStatus(r,a, s[-1]))
         sleep(.5)
 
- 
+
 if __name__ == '__main__':
     grid = [[0,0,1,1,0,0],
             [0,0,1,1,0,0],
