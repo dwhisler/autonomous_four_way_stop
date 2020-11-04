@@ -179,6 +179,9 @@ class FourWayStopMDP(util.MDP):
         if self.grid[agent_loc[0], agent_loc[1]] == 0: # if offroad
             return -10
 
+        if self.grid[agent_loc[0], agent_loc[1]] == 2: # if in wrong lane (assuming goal is always at north)
+            return -5
+
         if tuple(agent_loc) in self.stops and stay_counter == 1: # incentivize stopping at the stop sign
             if self.stopped:
                 return -1

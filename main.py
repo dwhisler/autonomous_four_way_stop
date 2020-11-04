@@ -13,6 +13,12 @@ def create_grid(n):
     grid[n//2-1, :] = 1
     grid[:, n//2]   = 1
     grid[:, n//2-1] = 1
+
+    # Set wrong lane to value 2
+    grid[n//2-1, :n//2-1] = 2
+    grid[n//2, n//2+1:] = 2
+    grid[n//2+1:, n//2-1] = 2
+    grid[:n//2-1, n//2-1] = 2
     return grid
 
 def get_stops(n):
