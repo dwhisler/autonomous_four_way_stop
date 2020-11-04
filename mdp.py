@@ -1,6 +1,7 @@
 import util
 import numpy as np
 import random
+import itertools
 from typing import List, Callable, Tuple, Any, NewType
 
 # taken from CS 221 HW4
@@ -8,7 +9,7 @@ from typing import List, Callable, Tuple, Any, NewType
 # TODO: Randomize start locations, add other agents
 
 class FourWayStopMDP(util.MDP):
-    def __init__(self, grid: np.ndarray, stops: List[Tuple]):
+    def __init__(self, grid: np.ndarray, stops: List[Tuple], num_other=1):
         """
         grid: 2D numpy array which maps the initial road layout
         stops: List of (x,y) for where stop signs are located
@@ -22,9 +23,12 @@ class FourWayStopMDP(util.MDP):
                             'east':np.array([0,1]),
                             'stay':np.array([0,0])}
         self.dest = None
-        self.other = None
+        self.other = [None for _ in range(num_other)]
         self.stopped = False
         self.n = self.grid.shape[0]
+
+        # self.debug = True
+        # self.debug_count = 0
 
     # Return the start state.
     def startState(self) -> Tuple:
@@ -41,20 +45,28 @@ class FourWayStopMDP(util.MDP):
         east_end = (int(n/2), n-1)
 
         agent_loc = random.choice([south_start, west_start, east_start])
-        self.dest = np.array( (0, int(n/2))) #np.array(random.choice([north_end, west_end, east_end]))
+        self.dest = np.array((0, int(n/2))) #np.array(random.choice([north_end, west_end, east_end]))
         self.starts = [north_start, south_start, west_start, east_start]
         self.starts.remove(agent_loc)
         ends = [north_end, south_end, west_end, east_end]
         # Chooses random start location and end location, where start != end
-        other_loc = np.array(random.choice(self.starts))
-        other_dest = np.array(random.choice(ends))
-        while (np.linalg.norm(other_dest-other_loc)) <= 1: # if choose end on same side as start
-            other_dest = np.array(random.choice(ends))
 
-        self.other = OtherActor(start=other_loc, dest=other_dest, probstop=0.0, gridsz=self.n)
+        for k in range(len(self.other)):
+            if len(self.starts) == 0:
+                self.starts = [north_start, south_start, west_start, east_start]
+                self.starts.remove(agent_loc)
+            other_loc = random.choice(self.starts)
+            self.starts.remove(other_loc)
+            other_loc = np.array(other_loc)
+            other_dest = np.array(random.choice(ends))
+            while (np.linalg.norm(other_dest-other_loc)) <= 1: # if choose end on same side as start
+                other_dest = np.array(random.choice(ends))
+
+            self.other[k] = OtherActor(start=other_loc, dest=other_dest, probstop=0.8, gridsz=self.n)
+
         stay_counter = 0
 
-        return (np.array(agent_loc), other_loc, stay_counter)
+        return (np.array(agent_loc), [other.start for other in self.other], stay_counter)
 
     # Return set of actions possible from |state|.
     # All logic for dealing with end states should be placed into the succAndProbReward function below.
@@ -67,7 +79,7 @@ class FourWayStopMDP(util.MDP):
             actions.append('south')
         if agent_loc[1] > 0:
             actions.append('west')
-        if agent_loc[1] < self.grid.shape[1]-1:
+        if agent_loc[1] < self.n-1:
             actions.append('east')
         return actions
 
@@ -82,38 +94,69 @@ class FourWayStopMDP(util.MDP):
 
     def succAndProbReward(self, state: Tuple, action: str) -> List[Tuple]:
         agent_loc = state[0]
-        other_loc = state[1]
+        other_locs = state[1]
         stay_counter = state[2]
 
-        if np.array_equal(agent_loc, self.dest) or np.array_equal(agent_loc, other_loc): # if at goal or crashed
+        if np.array_equal(agent_loc, self.dest): # if at goal
             return []
+        for other_loc in other_locs:
+            if np.array_equal(agent_loc, other_loc): # if crashed
+                return []
 
         transitions = []
-        other_action_probs = self.other.get_action_probs(other_loc, self.grid, self.stops)
+        other_action_probs = []
+        for k in range(len(self.other)):
+            other_action_probs.append(self.other[k].get_action_probs(other_locs[k], self.grid, self.stops))
+
         agent_loc_new = agent_loc + self.action_dict[action]
+
         # lemcardenas: mod each coordinate or else we go off the grid
         # agent_loc_new[0] %= 6
         # agent_loc_new[1] %= 6
 
-        for other_action_prob in other_action_probs:
-            other_action = other_action_prob[0]
-            other_prob = other_action_prob[1]
-            # if np.array_equal(other_loc, self.other.dest):
-            #     other_loc_new = np.array(random.choice(self.starts))
-            # else:
-            other_loc_new = other_loc + self.action_dict[other_action]
-            # lemcardenas: mod each coordinate or else we go off the grid
-            other_loc_new[0] %= self.n
-            other_loc_new[1] %= self.n
+        if np.array_equal(agent_loc_new, agent_loc):
+            stay_counter += 1
+        else:
+            stay_counter = 0
 
-            if np.array_equal(agent_loc_new, agent_loc):
-                stay_counter += 1
-            else:
-                stay_counter = 0
-
-            new_state = (agent_loc_new, other_loc_new, stay_counter)
+        for action_prob_combination in itertools.product(*other_action_probs):
+            other_actions = [combo[0] for combo in action_prob_combination]
+            other_probs = [combo[1] for combo in action_prob_combination]
+            # print(other_actions)
+            # print(other_probs)
+            other_locs_new = [(other_locs[k] + self.action_dict[other_actions[k]]) % self.n for k in range(len(other_locs))]
+            new_state = (agent_loc_new, other_locs_new, stay_counter)
             reward = self.get_reward(new_state)
-            transitions.append((new_state, other_prob, reward))
+
+            transitions.append((new_state, np.prod(other_probs), reward))
+
+
+
+        # for other_action_prob in other_action_probs:
+        #     other_action = other_action_prob[0]
+        #     other_prob = other_action_prob[1]
+        #     # if np.array_equal(other_loc, self.other.dest):
+        #     #     other_loc_new = np.array(random.choice(self.starts))
+        #     # else:
+        #     other_loc_new = other_loc + self.action_dict[other_action]
+        #     # lemcardenas: mod each coordinate or else we go off the grid
+        #     other_loc_new[0] %= self.n
+        #     other_loc_new[1] %= self.n
+        #
+        #     if np.array_equal(agent_loc_new, agent_loc):
+        #         stay_counter += 1
+        #     else:
+        #         stay_counter = 0
+        #
+        #     new_state = (agent_loc_new, other_loc_new, stay_counter)
+        #     reward = self.get_reward(new_state)
+        #     transitions.append((new_state, other_prob, reward))
+
+        # if self.debug:
+        #     print(transitions)
+        #     self.debug_count += 1
+        #     if self.debug_count > 10:
+        #         self.debug = False
 
         return transitions
 
@@ -123,11 +166,12 @@ class FourWayStopMDP(util.MDP):
 
     def get_reward(self, state):
         agent_loc = state[0]
-        other_loc = state[1]
+        other_locs = state[1]
         stay_counter = state[2]
 
-        if np.array_equal(agent_loc, other_loc):
-            return -100
+        for other_loc in other_locs:
+            if np.array_equal(agent_loc, other_loc):
+                return -100
 
         if np.array_equal(agent_loc, self.dest):
             return 20
@@ -219,8 +263,9 @@ if __name__ == '__main__':
     grid[3,:] = 1
     stops = [(1,2), (3,1), (4,3), (2,4)]
 
-    mdp = FourWayStopMDP(grid, stops)
+    mdp = FourWayStopMDP(grid, stops, num_other=3)
     start_state = mdp.startState()
+    print(start_state)
     # print(mdp.get_reward(start_state))
     # print(mdp.dest)
     # print(start_state)
