@@ -124,10 +124,11 @@ def simulate(mdp: MDP, rl: RLAlgorithm, numTrials=10, maxIterations=1000, verbos
         if verbose:
             print(("Trial %d (totalReward = %s): %s" % (trial, totalReward, sequence)))
         totalRewards.append(totalReward)
-        if np.array_equal(state[0], state[1]):# crash
-            crashes.append(1)
-        else:
-            crashes.append(0)
+        for other_loc in state[1]:
+            if np.array_equal(state[0], other_loc):# crash
+                crashes.append(1)
+            else:
+                crashes.append(0)
 
     visualization = (zip(states, rewards, actions), gridInfo)
     return totalRewards, crashes, visualization
@@ -163,14 +164,16 @@ def visualizer(results, gridInfo, sleep_time=1):
                     hor[y][x]=u'+\u2013\u2013\u2013'
 
         def updateLocations(l, agent=0):
-            x,y=l
             if not agent: # our agent
+                x,y=l
                 ver[x][y] = ver[x][y][0]+' Us'
             else: # other agent
-                if ver[x][y][1:] == ' Us':
-                    ver[x][y] = ver[x][y][0]+u' \u2573 '
-                else:
-                    ver[x][y] = ver[x][y][0]+'Oth'
+                for loc in l:
+                    x,y=loc
+                    if ver[x][y][1:] == ' Us':
+                        ver[x][y] = ver[x][y][0]+u' \u2573 '
+                    else:
+                        ver[x][y] = ver[x][y][0]+'Oth'
 
 
         for x in range(w):

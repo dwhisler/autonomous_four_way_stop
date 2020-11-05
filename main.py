@@ -35,6 +35,12 @@ def create_grid(n):
     grid[n//2-1, :] = 1
     grid[:, n//2]   = 1
     grid[:, n//2-1] = 1
+
+    # Set wrong lane to value 2
+    grid[n//2-1, :n//2-1] = 2
+    grid[n//2, n//2+1:] = 2
+    grid[n//2+1:, n//2-1] = 2
+    grid[:n//2-1, n//2-1] = 2
     return grid
 
 def get_stops(n):
@@ -51,21 +57,26 @@ def get_stops(n):
 ################################################################################
 
 def main():
-    # gird size
-    n = 6
+    # grid size
+    n = 12
     # create grid + stops
     grid = create_grid(n)
     stops = get_stops(n)
 
-    mdp = FourWayStopMDP(grid, stops)
+    mdp = FourWayStopMDP(grid, stops, num_other=2)
     qRL = QLearningAgent(mdp.actions, mdp.discount, identityFeatureExtractor_str, )
 
+<<<<<<< HEAD
     total_rewards, crashes, visualization = simulate(mdp, qRL, maxIterations=10, numTrials=10000)
 
+=======
+    total_rewards, crashes, visualization = simulate(mdp, qRL, maxIterations=10, numTrials=1000)
+>>>>>>> 0fffe7adc1b74d699b152d8855243fa5362a82d6
 
 
-    # plt.plot(moving_average(total_rewards))
+    plt.plot(moving_average(total_rewards))
     # plt.plot(total_rewards)
+<<<<<<< HEAD
     # plt.plot(total_rewards, label='base')
     plt.plot(smooth(total_rewards, .9), label='.9')
     # plt.plot(smooth(total_rewards, .8), label='.8')
@@ -73,12 +84,15 @@ def main():
     # plt.plot(smooth(total_rewards, .6), label='.6')
     plt.plot(moving_average(total_rewards, n=20), label='mv 20')
     plt.legend()
+=======
+    # plt.plot(moving_average(crashes, 500))
+>>>>>>> 0fffe7adc1b74d699b152d8855243fa5362a82d6
     plt.show()
     # print(list(visualization[0]))
 
     # qRL.explorationProb = 0
     # total_rewards, visualization = simulate(mdp, qRL, maxIterations=10, numTrials=2)
-    # visualizer(*visualization)
+    visualizer(*visualization)
 
 
 
