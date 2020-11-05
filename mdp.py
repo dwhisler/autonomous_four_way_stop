@@ -191,8 +191,9 @@ class FourWayStopMDP(util.MDP):
         return -1 # default, pushes toward destination so it doesn't sit in one spot
 
 class OtherActor:
-    def __init__(self, start, dest, probstop=0.9, gridsz=6):
+    def __init__(self, start, dest, probstop=0.9, gridsz=6, probstop_discount=0.1):
         self.probstop = probstop
+        self.probstop_discount = probstop_discount
         # assume dest is a coordinate (y, x)
         # assume start is a coordinate (y, x)
         self.dest = dest
@@ -244,7 +245,9 @@ class OtherActor:
             return [(possible_move[-1], 1)]
         else:
             # print([('stay', self.probstop)] + [(possible_move[-1], (1 - self.probstop))])
-            return [('stay', self.probstop)] + [(possible_move[-1], (1 - self.probstop))]
+            curr_probstop = self.probstop
+            self.probstop *= self.probstop_discount
+            return [('stay', curr_probstop)] + [(possible_move[-1], (1 - curr_probstop))]
 
 
 if __name__ == '__main__':
