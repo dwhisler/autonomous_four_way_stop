@@ -66,17 +66,10 @@ def main():
     mdp = FourWayStopMDP(grid, stops, num_other=2)
     qRL = QLearningAgent(mdp.actions, mdp.discount, identityFeatureExtractor_str, )
 
-<<<<<<< HEAD
     total_rewards, crashes, visualization = simulate(mdp, qRL, maxIterations=10, numTrials=10000)
-
-=======
-    total_rewards, crashes, visualization = simulate(mdp, qRL, maxIterations=10, numTrials=1000)
->>>>>>> 0fffe7adc1b74d699b152d8855243fa5362a82d6
-
 
     plt.plot(moving_average(total_rewards))
     # plt.plot(total_rewards)
-<<<<<<< HEAD
     # plt.plot(total_rewards, label='base')
     plt.plot(smooth(total_rewards, .9), label='.9')
     # plt.plot(smooth(total_rewards, .8), label='.8')
@@ -84,9 +77,7 @@ def main():
     # plt.plot(smooth(total_rewards, .6), label='.6')
     plt.plot(moving_average(total_rewards, n=20), label='mv 20')
     plt.legend()
-=======
     # plt.plot(moving_average(crashes, 500))
->>>>>>> 0fffe7adc1b74d699b152d8855243fa5362a82d6
     plt.show()
     # print(list(visualization[0]))
 
