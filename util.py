@@ -71,7 +71,7 @@ class RLAlgorithm:
 # Each trial will run for at most |maxIterations|.
 # Return the list of rewards that we get for each trial.
 def simulate(mdp: MDP, rl: RLAlgorithm, numTrials=10, maxIterations=1000, verbose=False,
-             sort=False):
+             sort=False, testInterval=500, testTrials=100):
     # Return i in [0, ..., len(probs)-1] with probability probs[i].
     def sample(probs):
         target = random.random()
@@ -81,12 +81,7 @@ def simulate(mdp: MDP, rl: RLAlgorithm, numTrials=10, maxIterations=1000, verbos
             if accum >= target: return i
         raise Exception("Invalid probs: %s" % probs)
 
-    gridInfo = (mdp.grid, mdp.stops)
-
-    totalRewards = []  # The rewards we get on each trial
-    crashes = [] # indicators for if crashed or not.
-    visualization = []
-    for trial in tqdm(range(numTrials)):
+    def run_trial(train=True):
         state = mdp.startState()
         sequence = [state]
         totalDiscount = 1
@@ -96,6 +91,7 @@ def simulate(mdp: MDP, rl: RLAlgorithm, numTrials=10, maxIterations=1000, verbos
         states = []
         rewards = []
         actions = []
+        crashed = 0
         for _ in range(maxIterations):
             action = rl.getAction(state)
 
@@ -107,7 +103,8 @@ def simulate(mdp: MDP, rl: RLAlgorithm, numTrials=10, maxIterations=1000, verbos
             transitions = mdp.succAndProbReward(state, action)
             if sort: transitions = sorted(transitions)
             if len(transitions) == 0:
-                rl.incorporateFeedback(state, action, 0, None)
+                if train:
+                    rl.incorporateFeedback(state, action, 0, None)
                 break
 
             # Choose a random transition
@@ -117,7 +114,8 @@ def simulate(mdp: MDP, rl: RLAlgorithm, numTrials=10, maxIterations=1000, verbos
             sequence.append(reward)
             sequence.append(newState)
 
-            rl.incorporateFeedback(state, action, reward, newState)
+            if train:
+                rl.incorporateFeedback(state, action, reward, newState)
             totalReward += totalDiscount * reward
             totalDiscount *= mdp.discount()
             state = newState
@@ -125,16 +123,50 @@ def simulate(mdp: MDP, rl: RLAlgorithm, numTrials=10, maxIterations=1000, verbos
             #     break
         if verbose:
             print(("Trial %d (totalReward = %s): %s" % (trial, totalReward, sequence)))
-        totalRewards.append(totalReward)
         for other_loc in state[1]:
             if np.array_equal(state[0], other_loc):# crash
-                crashes.append(1)
-                break
-            else:
-                crashes.append(0)
+                crashed = 1
+        return states, rewards, actions, crashed, totalReward
 
+    gridInfo = (mdp.grid, mdp.stops)
+
+    totalRewards = []  # The rewards we get on each trial
+    totalCrashes = [] # indicators for if crashed or not.
+    visualization = []
+
+    testCrashes = []
+    testAvgRewards = []
+    for trial in tqdm(range(numTrials)):
+
+        # training trial
+        states, rewards, actions, crashed, totalReward = run_trial()
         visualization.append(zip(states, rewards, actions))
-    return totalRewards, crashes, visualization
+        totalCrashes.append(crashed)
+        totalRewards.append(totalReward)
+
+
+        # test trial
+        if trial == 0 or (trial+1) % testInterval == 0:
+            # clear exploration Probability
+            expProb = rl.explorationProb
+            rl.explorationProb = 0
+
+            avgReward = 0
+            crashes  = 0
+            for t in range(testTrials):
+                _, _, _, crashed, totalReward = run_trial(train=False)
+
+                avgReward += 1/(t+1)*(totalReward - avgReward)
+                crashes += crashed
+
+            testAvgRewards.append(avgReward)
+            testCrashes.append(crashes)
+            # reset exploration prob
+            rl.explorationProb = expProb
+
+        
+
+    return totalRewards, totalCrashes, visualization, testCrashes, testAvgRewards
 
 
 def visualizer(results, gridInfo, sleep_time=1):
@@ -149,13 +181,15 @@ def visualizer(results, gridInfo, sleep_time=1):
                 hor[y][x] = f'+ ~ '
             elif grid[x][y] == grid[x][y-1]:
                 hor[y][x] = f'+   '
-            elif grid[y][x] == grid[y-1][x]:
+            elif grid[y][x] in [1,2] and grid[y-1][x] in [1,2]:
                 hor[y][x] = f'+   '
 
         def updateVertical(x,y):
             if grid[x-1][y] == grid[x][y]:
                 ver[y][x] = f'    '
-                return
+            elif grid[x-1][y] in [1,2] and grid[x][y] in [1,2]:
+                ver[y][x] = f'    '
+            
 
         def updateStops(stops):
             for y,x in stops:
@@ -220,17 +254,3 @@ def visualizer(results, gridInfo, sleep_time=1):
             print(displayStatus(r,a, s[-1], i))
             sleep(sleep_time)
 
-
-if __name__ == '__main__':
-    grid = [[0,0,1,1,0,0],
-            [0,0,1,1,0,0],
-            [1,1,1,1,1,1],
-            [1,1,1,1,1,1],
-            [0,0,1,1,0,0],
-            [0,0,1,1,0,0]]
-    results = [[ (((1,1),(2,2),0), 1, 'south'),
-                (((1,2),(2,3),0), 2,  'west'),
-                (((1,3),(2,4),1), 3,  'north'),
-                (((1,4),(1,4),0), -5,  'stay')
-            ]]
-    visualizer(results, (grid, [(2,1), (1,3), (3,4), (4,2)]))

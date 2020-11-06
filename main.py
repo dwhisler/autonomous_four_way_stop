@@ -15,7 +15,9 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--train' , '-tr', action='store', type=int, 
                             default=1000, help='Number of training trials')
 parser.add_argument('--test'  , '-ts', action='store', type=int, 
-                            default=100, help='Number of test trials')
+                            default=100, help='Number of test trials every tsi trials')
+parser.add_argument('--testIt', '-tsi', action='store', type=int, 
+                            default=100, help='Period of running tests')
 parser.add_argument('--iters' , '-i' , action='store', type=int, 
                             default=10, help='Max iterations per trial')
 parser.add_argument('--size'  , '-n' , action='store', type=int, 
@@ -85,7 +87,7 @@ def main(args):
     stops = get_stops(n)
 
     # create custom feature extractor
-    nFeatureExtractor = lambda s, a: customFeatureExtractor(s, a, n=n)
+    nFeatureExtractor = lambda s, a: customFeatureExtractor(s, a, n=n, stops=stops)
 
     # create MDP
     mdp = FourWayStopMDP(grid, stops, num_other=args.others)
@@ -93,9 +95,25 @@ def main(args):
     qRL = QLearningAgent(mdp.actions, mdp.discount, nFeatureExtractor)  # identityFeatureExtractor_str
 
     ##### Training #####
-    total_rewards, crashes, visualization = simulate(mdp, qRL, 
-                                                        maxIterations=args.iters, 
-                                                        numTrials=args.train)
+    total_rewards, crashes, visualization, testCrashes, testAvgRewards = simulate(mdp, qRL, 
+                                                                            maxIterations=args.iters, 
+                                                                            numTrials=args.train,
+                                                                            testTrials=args.test,
+                                                                            testInterval=args.testIt)
+
+    plt.plot([i*args.testIt for i in range(args.train // args.testIt + 1)], np.array(testCrashes)/args.test)
+    plt.title('Percent Test Trials Crash vs Number of Training Trials')
+    plt.xlabel('Training Itertions')
+    plt.ylabel('Percent Crashed')
+    plt.ylim([0, max(max(np.array(testCrashes)/args.test),0.5)])
+    plt.show()
+
+    plt.plot([i*args.testIt for i in range(args.train // args.testIt + 1)], testAvgRewards)
+    plt.title(f'Average Test Reward Over {args.test} Trials vs Number of Training Trials')
+    plt.xlabel('Training Iterations')
+    plt.ylabel('Avg. Test Reward')
+    plt.show()
+
 
 
     ##### Plotting #####
@@ -112,14 +130,11 @@ def main(args):
 
 
     ##### Testing #####
-    qRL.explorationProb = 0
-    total_rewards, crashes, visualization = simulate(mdp, qRL, 
-                                                        maxIterations=args.iters, 
-                                                        numTrials=args.test)
+
     if args.viz:
         visualizer(visualization, (grid, stops))
-    print(f'Average Test Reward: {np.mean(total_rewards)}')
-    print(f'Num Test Crashes: {sum(crashes)} - {np.mean(crashes)*100:.3f}%')
+    print(f'Final Avg Test Reward: {testAvgRewards[-1]:.3f}')
+    print(f'Final Test Crashes: {testCrashes[-1]} - {testCrashes[-1]/args.test*100:.3f}%')
 
 
 

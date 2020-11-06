@@ -98,9 +98,11 @@ class FourWayStopMDP(util.MDP):
         stay_counter = state[2]
 
         if np.array_equal(agent_loc, self.dest): # if at goal
+            self.stopped = False
             return []
         for other_loc in other_locs:
             if np.array_equal(agent_loc, other_loc): # if crashed
+                self.stopped = False
                 return []
 
         transitions = []
