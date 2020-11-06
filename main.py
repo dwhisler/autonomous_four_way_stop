@@ -5,7 +5,27 @@ from util import *
 import numpy
 import os
 import matplotlib.pyplot as plt
+import argparse
 
+################################################################################
+# Arguments
+################################################################################
+parser = argparse.ArgumentParser()
+
+parser.add_argument('--train' , '-tr', action='store', type=int, 
+                            default=1000, help='Number of training trials')
+parser.add_argument('--test'  , '-ts', action='store', type=int, 
+                            default=100, help='Number of test trials')
+parser.add_argument('--iters' , '-i' , action='store', type=int, 
+                            default=10, help='Max iterations per trial')
+parser.add_argument('--size'  , '-n' , action='store', type=int, 
+                            default=6, help='Grid size: nxn')
+parser.add_argument('--others', '-o' , action='store', type=int, 
+                            default=2, help='Number of other agents')
+parser.add_argument('--plot'  , '-p' , action='store_true', 
+                            default=False, help='Plotting Flag')
+parser.add_argument('--viz'   , '-v' , action='store_true', 
+                            default=False, help='Visualization Flag')
 ################################################################################
 # Plotting Helpers
 ################################################################################
@@ -56,45 +76,51 @@ def get_stops(n):
 # Main
 ################################################################################
 
-def main():
+def main(args):
+    ##### Initialization #####
     # grid size
-    n = 12
+    n = args.size
     # create grid + stops
     grid = create_grid(n)
     stops = get_stops(n)
 
-    mdp = FourWayStopMDP(grid, stops, num_other=2)
-    qRL = QLearningAgent(mdp.actions, mdp.discount, identityFeatureExtractor_str, )
+    # create custom feature extractor
+    nFeatureExtractor = lambda s, a: customFeatureExtractor(s, a, n=n)
 
-<<<<<<< HEAD
-    total_rewards, crashes, visualization = simulate(mdp, qRL, maxIterations=10, numTrials=10000)
+    # create MDP
+    mdp = FourWayStopMDP(grid, stops, num_other=args.others)
+    # create Q Learning
+    qRL = QLearningAgent(mdp.actions, mdp.discount, nFeatureExtractor)  # identityFeatureExtractor_str
 
-=======
-    total_rewards, crashes, visualization = simulate(mdp, qRL, maxIterations=10, numTrials=1000)
->>>>>>> 0fffe7adc1b74d699b152d8855243fa5362a82d6
+    ##### Training #####
+    total_rewards, crashes, visualization = simulate(mdp, qRL, 
+                                                        maxIterations=args.iters, 
+                                                        numTrials=args.train)
 
 
-    plt.plot(moving_average(total_rewards))
-    # plt.plot(total_rewards)
-<<<<<<< HEAD
-    # plt.plot(total_rewards, label='base')
-    plt.plot(smooth(total_rewards, .9), label='.9')
-    # plt.plot(smooth(total_rewards, .8), label='.8')
-    # plt.plot(smooth(total_rewards, .7), label='.7')
-    # plt.plot(smooth(total_rewards, .6), label='.6')
-    plt.plot(moving_average(total_rewards, n=20), label='mv 20')
-    plt.legend()
-=======
-    # plt.plot(moving_average(crashes, 500))
->>>>>>> 0fffe7adc1b74d699b152d8855243fa5362a82d6
-    plt.show()
-    # print(list(visualization[0]))
+    ##### Plotting #####
+    if args.plot:
+        plt.plot(moving_average(total_rewards, 50), label='avg 50')
+        plt.plot(total_rewards, linewidth=.5, label='raw')
+        plt.legend()
+        plt.show()
+        
+        plt.plot(moving_average(crashes, 50), label='avg 50')
+        plt.plot(crashes, linewidth=.5, label='raw')
+        plt.legend()
+        plt.show()
 
-    # qRL.explorationProb = 0
-    # total_rewards, visualization = simulate(mdp, qRL, maxIterations=10, numTrials=2)
-    visualizer(*visualization)
+    ##### Testing #####
+    qRL.explorationProb = 0
+    total_rewards, crashes, visualization = simulate(mdp, qRL, 
+                                                        maxIterations=args.iters, 
+                                                        numTrials=args.test)
+    if args.viz:
+        visualizer(visualization, (grid, stops))
+    print(f'Average Test Reward: {np.mean(total_rewards)}')
+    print(f'Num Test Crashes: {sum(crashes)} - {np.mean(crashes)*100:.3f}%')
 
 
 
 if __name__ == '__main__':
-    main()
+    main(parser.parse_args())

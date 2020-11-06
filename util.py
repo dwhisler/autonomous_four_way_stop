@@ -81,19 +81,21 @@ def simulate(mdp: MDP, rl: RLAlgorithm, numTrials=10, maxIterations=1000, verbos
             if accum >= target: return i
         raise Exception("Invalid probs: %s" % probs)
 
-    # visualization
-    states = []
-    rewards = []
-    actions = []
     gridInfo = (mdp.grid, mdp.stops)
 
     totalRewards = []  # The rewards we get on each trial
     crashes = [] # indicators for if crashed or not.
+    visualization = []
     for trial in tqdm(range(numTrials)):
         state = mdp.startState()
         sequence = [state]
         totalDiscount = 1
         totalReward = 0
+
+        # visualization
+        states = []
+        rewards = []
+        actions = []
         for _ in range(maxIterations):
             action = rl.getAction(state)
 
@@ -127,10 +129,11 @@ def simulate(mdp: MDP, rl: RLAlgorithm, numTrials=10, maxIterations=1000, verbos
         for other_loc in state[1]:
             if np.array_equal(state[0], other_loc):# crash
                 crashes.append(1)
+                break
             else:
                 crashes.append(0)
 
-    visualization = (zip(states, rewards, actions), gridInfo)
+        visualization.append(zip(states, rewards, actions))
     return totalRewards, crashes, visualization
 
 
@@ -145,6 +148,8 @@ def visualizer(results, gridInfo, sleep_time=1):
             if grid[x][y-1] == 0 and grid[x][y] == 0:
                 hor[y][x] = f'+ ~ '
             elif grid[x][y] == grid[x][y-1]:
+                hor[y][x] = f'+   '
+            elif grid[y][x] == grid[y-1][x]:
                 hor[y][x] = f'+   '
 
         def updateVertical(x,y):
@@ -165,8 +170,8 @@ def visualizer(results, gridInfo, sleep_time=1):
 
         def updateLocations(l, agent=0):
             if not agent: # our agent
-                x,y=l
-                ver[x][y] = ver[x][y][0]+' Us'
+                y,x=l
+                ver[y][x] = ver[y][x][0]+' Us'
             else: # other agent
                 for loc in l:
                     x,y=loc
@@ -192,12 +197,12 @@ def visualizer(results, gridInfo, sleep_time=1):
             s += ''.join(a + ['\n'] + b + ['\n'])
         return s
 
-    def displayStatus(score, action, stand):
+    def displayStatus(score, action, stand,i):
         s = ''
-        s += u'\u250C\u2500\u2500\u2500\u2500\u2500\u252C\u2500\u2500\u2500\u2500\u2500\u2500\u252C\u2500\u2500\u2500\u2500\u2500\u2510\n'
-        s += u'\u2502Score\u2502Action\u2502Stand\u2502\n'
-        s += u'\u2502{0:^5}\u2502{1:^6}\u2502{2:^5}\u2502\n'.format(score, actionDict[action], stand)
-        s += u'\u2514\u2500\u2500\u2500\u2500\u2500\u2534\u2500\u2500\u2500\u2500\u2500\u2500\u2534\u2500\u2500\u2500\u2500\u2500\u2518\n'
+        s += u'\u250C\u2500\u2500\u2500\u2500\u2500\u252C\u2500\u2500\u2500\u2500\u2500\u2500\u252C\u2500\u2500\u2500\u2500\u2500\u252C\u2500\u2500\u2500\u2500\u2500\u2510\n'
+        s += u'\u2502Score\u2502Action\u2502Stand\u2502Steps\u2502\n'
+        s += u'\u2502{0:^5}\u2502{1:^6}\u2502{2:^5}\u2502{3:^5}\u2502\n'.format(score, actionDict[action], stand, i)
+        s += u'\u2514\u2500\u2500\u2500\u2500\u2500\u2534\u2500\u2500\u2500\u2500\u2500\u2500\u2534\u2500\u2500\u2500\u2500\u2500\u2534\u2500\u2500\u2500\u2500\u2500\u2518\n'
         return s
 
     clear = lambda: os.system('cls' if os.name == 'nt' else 'clear')
@@ -208,11 +213,12 @@ def visualizer(results, gridInfo, sleep_time=1):
                     'stay': u'\u21BA',}
 
     grid, stops = gridInfo
-    for s, r, a in results:
-        clear()
-        print(makeGrid(grid=grid, stops=stops, locations=list(s[:-1])),end='')
-        print(displayStatus(r,a, s[-1]))
-        sleep(sleep_time)
+    for vis in results:
+        for i, (s, r, a) in enumerate(vis):
+            clear()
+            print(makeGrid(grid=grid, stops=stops, locations=list(s[:-1])),end='')
+            print(displayStatus(r,a, s[-1], i))
+            sleep(sleep_time)
 
 
 if __name__ == '__main__':
@@ -222,9 +228,9 @@ if __name__ == '__main__':
             [1,1,1,1,1,1],
             [0,0,1,1,0,0],
             [0,0,1,1,0,0]]
-    results = [ (((1,1),(2,2),0), 1, 'south'),
+    results = [[ (((1,1),(2,2),0), 1, 'south'),
                 (((1,2),(2,3),0), 2,  'west'),
                 (((1,3),(2,4),1), 3,  'north'),
                 (((1,4),(1,4),0), -5,  'stay')
-            ]
+            ]]
     visualizer(results, (grid, [(2,1), (1,3), (3,4), (4,2)]))
