@@ -191,9 +191,10 @@ class FourWayStopMDP(util.MDP):
         return -1 # default, pushes toward destination so it doesn't sit in one spot
 
 class OtherActor:
-    def __init__(self, start, dest, probstop=0.9, gridsz=6, probstop_discount=0.1):
+    def __init__(self, start, dest, probstop=0.9, gridsz=6, probstop_discount=0.1, prob_erratic=0.3):
         self.probstop = probstop
         self.probstop_discount = probstop_discount
+        self.prob_erratic = prob_erratic
         # assume dest is a coordinate (y, x)
         # assume start is a coordinate (y, x)
         self.dest = dest
@@ -240,11 +241,17 @@ class OtherActor:
         stay = (curr_loc, 'stay')
         possible_moves = [move for move in [west, east, north, south, stay] if tuple(move[0]) in self.valid_locs]
         possible_move = self.min_manhattan_dist(possible_moves, self.dest)
+        possible_erratic = [] if np.array_equal(curr_loc, self.dest)\
+            else [move for move in filter(lambda x: x[1] != possible_move[1] and\
+            np.count_nonzero(self.action_dict[x[1]] + self.action_dict[possible_move[1]]) == 2,\
+                    [west, east, north, south])] + [stay]
         if tuple(curr_loc) not in stops:
             # ncomly added [-1] to all moves to remove the location
+            if self.prob_erratic and possible_erratic and tuple(curr_loc) in self.valid_locs:
+                erratic_move_prob = self.prob_erratic / len(possible_erratic)
+                return [(possible_move[-1], 1 - self.prob_erratic)] + [(move[-1], erratic_move_prob) for move in possible_erratic]
             return [(possible_move[-1], 1)]
         else:
-            # print([('stay', self.probstop)] + [(possible_move[-1], (1 - self.probstop))])
             curr_probstop = self.probstop
             self.probstop *= self.probstop_discount
             return [('stay', curr_probstop)] + [(possible_move[-1], (1 - curr_probstop))]
