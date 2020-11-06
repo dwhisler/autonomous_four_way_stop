@@ -194,39 +194,38 @@ class FourWayStopMDP(util.MDP):
         return -1 # default, pushes toward destination so it doesn't sit in one spot
 
 class OtherActor:
-    def __init__(self, start, dest, probstop=0.9, gridsz=6):
+    def __init__(self, start, dest, probstop=0.9, gridsz=6, probstop_discount=0.1):
         self.probstop = probstop
-        # assume dest is a coordinate i.e. (3, 0), (2, 5)
-        # assume start is a coordinate i.e. (3, 0), (2, 5)
+        self.probstop_discount = probstop_discount
+        # assume dest is a coordinate (y, x)
+        # assume start is a coordinate (y, x)
         self.dest = dest
         self.start = start
         self.valid_locs = set()
-        if start[0] == 0 :
-            for i in range(0, dest[0] + 1):
-                self.valid_locs.add((i, start[1]))
-        elif start[0] == (gridsz - 1):
-            for i in range(dest[0], gridsz):
-                self.valid_locs.add((i, start[1]))
-        elif start[0] == (gridsz // 2):
+        if start[1] == 0:
             for i in range(0, dest[1] + 1):
                 self.valid_locs.add((start[0], i))
-        else: # start[0] == ((gridsz // 2) + 1);
+        elif start[1] == (gridsz - 1):
             for i in range(dest[1], gridsz):
                 self.valid_locs.add((start[0], i))
-        if dest[0] == 0 :
-            for i in range(0, start[0] + 1):
-                self.valid_locs.add((i, dest[1]))
-        elif dest[0] == (gridsz - 1):
-            for i in range(start[0], gridsz):
-                self.valid_locs.add((i, dest[1]))
-        elif dest[0] == (gridsz // 2):
+        elif start[1] == ((gridsz // 2) - 1):
+            for i in range(0, dest[0] + 1):
+                self.valid_locs.add((i, start[1]))
+        else: # start[1] == ((gridsz // 2))
+            for i in range(dest[0], gridsz):
+                self.valid_locs.add((i, start[1]))
+        if dest[1] == 0:
             for i in range(0, start[1] + 1):
                 self.valid_locs.add((dest[0], i))
-        else: # dest[0] == ((gridsz // 2) + 1);
+        elif dest[1] == (gridsz - 1):
             for i in range(start[1], gridsz):
                 self.valid_locs.add((dest[0], i))
-        # print(self.valid_locs)
-
+        elif dest[1] == ((gridsz // 2) - 1):
+            for i in range(start[0], gridsz):
+                self.valid_locs.add((i, dest[1]))
+        else: # dest[1] == ((gridsz // 2))
+            for i in range(0, start[0] + 1):
+                self.valid_locs.add((i, dest[1]))
         self.action_dict = {'north':np.array([-1,0]),
                             'south':np.array([1,0]),
                             'west':np.array([0,-1]),
@@ -237,28 +236,21 @@ class OtherActor:
         return sorted(moves, key=lambda x: abs(x[0][0] - dest[0]) + abs(x[0][1] - dest[1]))[0]
 
     def get_action_probs(self, curr_loc, grid, stops):
-        # assume top left corner is (0, 0)
-        # assume that the grid is size 6 x 6
-        #west = ((((curr_loc[0] - 1) % 6), curr_loc[1]), 'west')
-        #east = ((((curr_loc[0] + 1) % 6), curr_loc[1]), 'east')
-        #north = ((curr_loc[0], ((curr_loc[1] - 1) % 6)), 'north')
-        #south = ((curr_loc[0], ((curr_loc[1] + 1) % 6)), 'south')
-        # lemcardenas: prevents illegally wrapping around board with one move
         west  = (curr_loc + self.action_dict['west'], 'west')
         east  = (curr_loc + self.action_dict['east'], 'east')
         north = (curr_loc + self.action_dict['north'], 'north')
         south = (curr_loc + self.action_dict['south'], 'south')
-
-
         stay = (curr_loc, 'stay')
         possible_moves = [move for move in [west, east, north, south, stay] if tuple(move[0]) in self.valid_locs]
         possible_move = self.min_manhattan_dist(possible_moves, self.dest)
         if tuple(curr_loc) not in stops:
-            # print([(possible_move[-1], 1)]) # ncomly added [-1] to all moves to remove the location
+            # ncomly added [-1] to all moves to remove the location
             return [(possible_move[-1], 1)]
         else:
             # print([('stay', self.probstop)] + [(possible_move[-1], (1 - self.probstop))])
-            return [('stay', self.probstop)] + [(possible_move[-1], (1 - self.probstop))]
+            curr_probstop = self.probstop
+            self.probstop *= self.probstop_discount
+            return [('stay', curr_probstop)] + [(possible_move[-1], (1 - curr_probstop))]
 
 
 if __name__ == '__main__':

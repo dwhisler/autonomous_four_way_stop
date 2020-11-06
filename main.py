@@ -110,6 +110,7 @@ def main(args):
         plt.legend()
         plt.show()
 
+
     ##### Testing #####
     qRL.explorationProb = 0
     total_rewards, crashes, visualization = simulate(mdp, qRL, 
