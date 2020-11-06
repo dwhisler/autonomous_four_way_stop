@@ -124,7 +124,10 @@ class FourWayStopMDP(util.MDP):
             other_probs = [combo[1] for combo in action_prob_combination]
             # print(other_actions)
             # print(other_probs)
-            other_locs_new = [(other_locs[k] + self.action_dict[other_actions[k]]) % self.n for k in range(len(other_locs))]
+            other_locs_new = [(other_locs[k] + self.action_dict[other_actions[k]]) % self.n 
+                                if not np.array_equal(((other_locs[k] + self.action_dict[other_actions[k]]) % self.n), self.other[k].dest) 
+                                else self.other[k].start 
+                                for k in range(len(other_locs))]
             new_state = (agent_loc_new, other_locs_new, stay_counter)
             reward = self.get_reward(new_state)
 
