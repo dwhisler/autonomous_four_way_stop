@@ -80,7 +80,7 @@ def identityFeatureExtractor_str(state: Tuple, action: Any) -> List[Tuple[Tuple,
 
 
 # Custom feature extractor. Returns list of (feature, value) pairs
-def customFeatureExtractor(state: Tuple, action: Any, n: int) -> List[Tuple[Tuple, int]]:
+def customFeatureExtractor(state: Tuple, action: Any, n: int, stops: List) -> List[Tuple[Tuple, int]]:
     # distance helper
     def dist(p1, p2, norm=1):
         if norm == 1:
@@ -100,6 +100,7 @@ def customFeatureExtractor(state: Tuple, action: Any, n: int) -> List[Tuple[Tupl
             else:
                 return 'east'
 
+
     # initialize features
     features = []
 
@@ -117,7 +118,7 @@ def customFeatureExtractor(state: Tuple, action: Any, n: int) -> List[Tuple[Tupl
                     'east':np.array([0,1]),
                     'stay':np.array([0,0])}
     newAgent = np.array(agent) + actionDict[action]
-    features.append((('newDist2Goal', dist(newAgent, (0, int(n/2)))),1))
+    features.append((('newDist2Goal', dist(newAgent, (0, int(n/2)))),1)) # questionable... requires knowledge of grid
 
     # distance to closest agent
     minDist = float('inf')
@@ -127,8 +128,11 @@ def customFeatureExtractor(state: Tuple, action: Any, n: int) -> List[Tuple[Tupl
         if tempDist < minDist:
             minDist = tempDist
             minDir = dir(agent, otherAgent)
-    features.append((('closestOther', minDist), 1))
-    features.append((('dirClosestOther', minDir, action), 1))
+        # crash
+        if np.array_equal(otherAgent, newAgent):
+            features.append(('crash', -1)) # increasing this number decreases crash percentage but also greatly hurts score
+    # features.append((('closestOther', minDist), 1))
+    features.append((('dirClosestOther', minDir, minDist, action), 1))
 
     # CLOSE
     features.append((('otherClose', minDist < 3),1))
@@ -137,12 +141,8 @@ def customFeatureExtractor(state: Tuple, action: Any, n: int) -> List[Tuple[Tupl
     # add current counter and location
     features.append((('counter', agent, counter, action), 1))
 
-
-    # add other locations with distance
-    for otherAgent in otherAgents:
-        # features.append((('otherAgent', dist(agent, otherAgent), action),1))
-        # crash
-        if np.array_equal(otherAgent, newAgent):
-            features.append(('crash', -1)) # increasing this number decreases crash percentage but also greatly hurts score
+    # at a stop sign
+    if agent in stops:
+        features.append((('stopped', action, counter),1)) # questionable... requires knowledge of grid
 
     return features
